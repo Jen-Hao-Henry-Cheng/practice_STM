@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <memory.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,7 +56,10 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+#define RX_BUFF_SIZE 256
+uint8_t rx_buff[RX_BUFF_SIZE];
+uint8_t a_rx_c;
+uint8_t rx_buff_index = 0;
 /* USER CODE END 0 */
 
 /**
@@ -89,7 +92,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_UART_Receive_IT(&huart2, &a_rx_c, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,9 +102,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	uint8_t Test[] = "Hello World !!!\r\n"; //Data to send
-	HAL_UART_Transmit(&huart2,Test,sizeof(Test),10);// Sending in normal mode
-	HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
@@ -224,7 +224,23 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	rx_buff[rx_buff_index] = a_rx_c;
+	rx_buff_index++;
 
+	if ( (rx_buff[rx_buff_index-1] == 0x0A) && (rx_buff[rx_buff_index-2] == 0x0D))
+	{
+		uint8_t txBuf[20] = "OK";
+		HAL_UART_Transmit_IT(&huart2, txBuf, 20);
+
+		// reset buffer index
+		rx_buff_index = 0;
+		memset(rx_buff, 0x00, RX_BUFF_SIZE);
+	}
+
+	HAL_UART_Receive_IT(&huart2, &a_rx_c, 1);
+}
 /* USER CODE END 4 */
 
 /**
